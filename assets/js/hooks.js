@@ -468,6 +468,198 @@ export const CalculatorLock = {
   }
 }
 
+// ─── WebRTC audio/video calls ──────────────────────────────────────────────────
+// Signaling is relayed through LiveView PubSub. All overlay DOM is built with
+// safe createElement/textContent — no innerHTML with user data.
+
+const _ICE = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+]
+
+function _el(tag, css, text) {
+  const e = document.createElement(tag)
+  if (css) e.style.cssText = css
+  if (text !== undefined) e.textContent = text
+  return e
+}
+
+export const WebRTCHook = {
+  _pc: null,
+  _localStream: null,
+  _remoteUserId: null,
+  _overlay: null,
+  _pendingIce: [],
+
+  mounted() {
+    this.handleEvent("webrtc_ring", ({ from_id, from_name }) => {
+      this._remoteUserId = from_id
+      this._showRinging(from_name)
+    })
+    this.handleEvent("webrtc_accepted", () => {
+      this._showConnecting()
+      this._startAsCallerAsync()
+    })
+    this.handleEvent("webrtc_offer", ({ sdp, from_id }) => {
+      this._remoteUserId = from_id
+      this._handleOfferAsync(sdp)
+    })
+    this.handleEvent("webrtc_answer", ({ sdp }) => { this._handleAnswerAsync(sdp) })
+    this.handleEvent("webrtc_ice",    ({ candidate }) => { this._handleIceAsync(candidate) })
+    this.handleEvent("webrtc_hangup", () => { this._cleanup(); this._removeOverlay() })
+  },
+
+  async _startAsCallerAsync() {
+    try {
+      this._localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      this._setupPC()
+      this._localStream.getTracks().forEach(t => this._pc.addTrack(t, this._localStream))
+      const offer = await this._pc.createOffer()
+      await this._pc.setLocalDescription(offer)
+      this.pushEvent("webrtc_offer", { sdp: { type: offer.type, sdp: offer.sdp }, to: String(this._remoteUserId) })
+    } catch(_) { this._cleanup(); this._removeOverlay() }
+  },
+
+  async _handleOfferAsync(sdp) {
+    try {
+      this._localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      this._setupPC()
+      this._localStream.getTracks().forEach(t => this._pc.addTrack(t, this._localStream))
+      await this._pc.setRemoteDescription(new RTCSessionDescription(sdp))
+      for (const c of this._pendingIce) await this._pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{})
+      this._pendingIce = []
+      const answer = await this._pc.createAnswer()
+      await this._pc.setLocalDescription(answer)
+      this.pushEvent("webrtc_answer", { sdp: { type: answer.type, sdp: answer.sdp }, to: String(this._remoteUserId) })
+      this._showInCall()
+    } catch(_) { this._cleanup(); this._removeOverlay() }
+  },
+
+  async _handleAnswerAsync(sdp) {
+    if (!this._pc) return
+    try {
+      await this._pc.setRemoteDescription(new RTCSessionDescription(sdp))
+      for (const c of this._pendingIce) await this._pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{})
+      this._pendingIce = []
+      this._showInCall()
+    } catch(_) {}
+  },
+
+  async _handleIceAsync(c) {
+    if (this._pc && this._pc.remoteDescription) {
+      await this._pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{})
+    } else {
+      this._pendingIce.push(c)
+    }
+  },
+
+  _setupPC() {
+    this._pc = new RTCPeerConnection({ iceServers: _ICE })
+    this._pc.onicecandidate = ({ candidate }) => {
+      if (candidate) this.pushEvent("webrtc_ice", { candidate: candidate.toJSON(), to: String(this._remoteUserId) })
+    }
+    this._pc.ontrack = ({ streams }) => {
+      const rv = document.getElementById("call-remote-video")
+      if (rv && streams[0]) { rv.srcObject = streams[0]; rv.play().catch(()=>{}) }
+    }
+    this._pc.onconnectionstatechange = () => {
+      const s = this._pc?.connectionState
+      if (s === "disconnected" || s === "failed" || s === "closed") {
+        this.pushEvent("webrtc_hangup", { to: String(this._remoteUserId) })
+        this._cleanup(); this._removeOverlay()
+      }
+    }
+  },
+
+  _createOverlay() {
+    this._removeOverlay()
+    const div = _el("div", "position:fixed;inset:0;z-index:9999;background:#111827;display:flex;flex-direction:column;align-items:center;justify-content:center;")
+    div.id = "call-overlay"
+    document.body.appendChild(div)
+    this._overlay = div
+    return div
+  },
+  _removeOverlay() { document.getElementById("call-overlay")?.remove(); this._overlay = null },
+
+  _showRinging(fromName) {
+    const ov = this._createOverlay()
+    const name = _el("div", "color:#fff;font-size:1.4rem;font-weight:300;margin-bottom:.4rem")
+    name.textContent = fromName  // safe: textContent only
+    const sub  = _el("div", "color:#9ca3af;font-size:.85rem;margin-bottom:2rem")
+    sub.textContent = "Incoming call…"
+    const row  = _el("div", "display:flex;gap:2.5rem")
+    const dec  = _el("button", "width:64px;height:64px;border-radius:50%;background:#ef4444;border:none;color:#fff;font-size:1.5rem;cursor:pointer", "✕")
+    const acc  = _el("button", "width:64px;height:64px;border-radius:50%;background:#22c55e;border:none;color:#fff;font-size:1.5rem;cursor:pointer", "✓")
+    dec.onclick = () => { this.pushEvent("webrtc_hangup", { to: String(this._remoteUserId) }); this._cleanup(); this._removeOverlay() }
+    acc.onclick = () => { this.pushEvent("webrtc_accept_call", { to: String(this._remoteUserId) }); this._showConnecting() }
+    row.append(dec, acc)
+    ov.append(name, sub, row)
+  },
+
+  _showConnecting() {
+    const ov = this._overlay || this._createOverlay()
+    while (ov.firstChild) ov.removeChild(ov.firstChild)
+    ov.append(
+      _el("div", "color:#fff;font-size:1.2rem;font-weight:300;margin-bottom:1.5rem", "Connecting…"),
+    )
+    const cancel = _el("button", "margin-top:2rem;width:56px;height:56px;border-radius:50%;background:#ef4444;border:none;color:#fff;font-size:1.4rem;cursor:pointer", "✕")
+    cancel.onclick = () => { this.pushEvent("webrtc_hangup", { to: String(this._remoteUserId) }); this._cleanup(); this._removeOverlay() }
+    ov.append(cancel)
+  },
+
+  _showInCall() {
+    const ov = this._overlay || this._createOverlay()
+    while (ov.firstChild) ov.removeChild(ov.firstChild)
+    ov.style.position = "fixed"
+
+    const remVid = document.createElement("video")
+    remVid.id = "call-remote-video"
+    remVid.autoplay = true; remVid.playsInline = true
+    remVid.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000"
+
+    const locVid = document.createElement("video")
+    locVid.id = "call-local-video"
+    locVid.autoplay = true; locVid.playsInline = true; locVid.muted = true
+    locVid.style.cssText = "position:absolute;bottom:1.5rem;right:1.5rem;width:140px;height:105px;object-fit:cover;border-radius:12px;border:2px solid #374151;z-index:10;background:#111"
+    if (this._localStream) { locVid.srcObject = this._localStream; locVid.play().catch(()=>{}) }
+
+    const controls = _el("div", "position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);display:flex;gap:1.25rem;z-index:20")
+    let audioMuted = false, camOff = false
+
+    const muteBtn = _el("button", "width:48px;height:48px;border-radius:50%;background:#374151;border:none;color:#fff;font-size:1.2rem;cursor:pointer", "🎤")
+    muteBtn.title = "Mute"
+    muteBtn.onclick = () => {
+      audioMuted = !audioMuted
+      this._localStream?.getAudioTracks().forEach(t => { t.enabled = !audioMuted })
+      muteBtn.textContent = audioMuted ? "🔇" : "🎤"
+    }
+
+    const camBtn = _el("button", "width:48px;height:48px;border-radius:50%;background:#374151;border:none;color:#fff;font-size:1.2rem;cursor:pointer", "📷")
+    camBtn.title = "Camera"
+    camBtn.onclick = () => {
+      camOff = !camOff
+      this._localStream?.getVideoTracks().forEach(t => { t.enabled = !camOff })
+      camBtn.textContent = camOff ? "🚫" : "📷"
+    }
+
+    const hangBtn = _el("button", "width:56px;height:56px;border-radius:50%;background:#ef4444;border:none;color:#fff;font-size:1.4rem;cursor:pointer", "✕")
+    hangBtn.title = "Hang up"
+    hangBtn.onclick = () => { this.pushEvent("webrtc_hangup", { to: String(this._remoteUserId) }); this._cleanup(); this._removeOverlay() }
+
+    controls.append(muteBtn, camBtn, hangBtn)
+    ov.append(remVid, locVid, controls)
+  },
+
+  _cleanup() {
+    this._pc?.close(); this._pc = null
+    this._localStream?.getTracks().forEach(t => t.stop()); this._localStream = null
+    this._remoteUserId = null
+    this._pendingIce = []
+  },
+
+  destroyed() { this._cleanup(); this._removeOverlay() }
+}
+
 // ─── Passkey registration (settings LiveView) ─────────────────────────────────
 // Fetches a registration challenge, calls navigator.credentials.create(),
 // posts the attestation, then fires a LiveView event to refresh the list.

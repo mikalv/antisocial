@@ -25,6 +25,7 @@ defmodule AntisocialWeb.ChatLive do
         import Ecto.Query
         all_users = Antisocial.Repo.all(Antisocial.Accounts.User)
         users_map = Map.new(all_users, fn u -> {u.id, u} end)
+        other_user = Enum.find(all_users, fn u -> u.id != user.id end)
 
         if connected?(socket) do
           Enum.each(messages, fn msg -> Chat.mark_first_read(msg, user.id) end)
@@ -52,7 +53,8 @@ defmodule AntisocialWeb.ChatLive do
            ttl_enabled: false,
            ttl_seconds: nil,
            ttl_channel_slug: "",
-           session_token: session["session_token"]
+           session_token: session["session_token"],
+           other_user: other_user
          )
          |> allow_upload(:media,
            accept: ~w(image/* video/* audio/*),
@@ -219,6 +221,86 @@ defmodule AntisocialWeb.ChatLive do
     {:noreply, socket}
   end
 
+  # ── WebRTC signaling relay (PubSub → JS hook) ─────────────────────────────
+
+  def handle_info({:webrtc_ring, from_id, from_name}, socket) do
+    {:noreply, push_event(socket, "webrtc_ring", %{from_id: from_id, from_name: from_name})}
+  end
+
+  def handle_info({:webrtc_accepted, _from_id}, socket) do
+    {:noreply, push_event(socket, "webrtc_accepted", %{})}
+  end
+
+  def handle_info({:webrtc_offer, sdp, from_id}, socket) do
+    {:noreply, push_event(socket, "webrtc_offer", %{sdp: sdp, from_id: from_id})}
+  end
+
+  def handle_info({:webrtc_answer, sdp, _from_id}, socket) do
+    {:noreply, push_event(socket, "webrtc_answer", %{sdp: sdp})}
+  end
+
+  def handle_info({:webrtc_ice, candidate, _from_id}, socket) do
+    {:noreply, push_event(socket, "webrtc_ice", %{candidate: candidate})}
+  end
+
+  def handle_info({:webrtc_hangup, _from_id}, socket) do
+    {:noreply, push_event(socket, "webrtc_hangup", %{})}
+  end
+
+  # ── WebRTC signaling relay (JS hook → PubSub) ─────────────────────────────
+
+  def handle_event("webrtc_start_call", %{"to" => to_id_str}, socket) do
+    user = socket.assigns.current_user
+    to_id = String.to_integer(to_id_str)
+    Phoenix.PubSub.broadcast(Antisocial.PubSub, "user:#{to_id}",
+      {:webrtc_ring, user.id, user.display_name || user.username})
+    {:noreply, socket}
+  end
+
+  def handle_event("webrtc_accept_call", %{"to" => to_id_str}, socket) do
+    user = socket.assigns.current_user
+    to_id = String.to_integer(to_id_str)
+    Phoenix.PubSub.broadcast(Antisocial.PubSub, "user:#{to_id}",
+      {:webrtc_accepted, user.id})
+    {:noreply, socket}
+  end
+
+  def handle_event("webrtc_offer", %{"sdp" => sdp, "to" => to_id_str}, socket) do
+    user = socket.assigns.current_user
+    to_id = String.to_integer(to_id_str)
+    Phoenix.PubSub.broadcast(Antisocial.PubSub, "user:#{to_id}",
+      {:webrtc_offer, sdp, user.id})
+    {:noreply, socket}
+  end
+
+  def handle_event("webrtc_answer", %{"sdp" => sdp, "to" => to_id_str}, socket) do
+    user = socket.assigns.current_user
+    to_id = String.to_integer(to_id_str)
+    Phoenix.PubSub.broadcast(Antisocial.PubSub, "user:#{to_id}",
+      {:webrtc_answer, sdp, user.id})
+    {:noreply, socket}
+  end
+
+  def handle_event("webrtc_ice", %{"candidate" => candidate, "to" => to_id_str}, socket) do
+    user = socket.assigns.current_user
+    to_id = String.to_integer(to_id_str)
+    Phoenix.PubSub.broadcast(Antisocial.PubSub, "user:#{to_id}",
+      {:webrtc_ice, candidate, user.id})
+    {:noreply, socket}
+  end
+
+  def handle_event("webrtc_hangup", params, socket) do
+    user = socket.assigns.current_user
+    case Map.get(params, "to") do
+      nil -> :ok
+      to_id_str ->
+        to_id = String.to_integer(to_id_str)
+        Phoenix.PubSub.broadcast(Antisocial.PubSub, "user:#{to_id}",
+          {:webrtc_hangup, user.id})
+    end
+    {:noreply, socket}
+  end
+
   defp notification_text(%{tab_icon: "calculator"}, _slug),
     do: {"Calculation complete", "Result ready"}
   defp notification_text(_, channel_slug),
@@ -339,6 +421,7 @@ defmodule AntisocialWeb.ChatLive do
     <div id="pin-lock-watcher" phx-hook="PinLock" data-idle-minutes={@idle_minutes} class="hidden" />
     <div id="notifications-hook" phx-hook="Notifications" class="hidden" />
     <div id="fingerprint-hook" phx-hook="DeviceFingerprint" class="hidden" />
+    <div id="webrtc-hook" phx-hook="WebRTCHook" class="hidden" />
 
     <%= if @locked do %>
       <.live_component
@@ -480,7 +563,19 @@ defmodule AntisocialWeb.ChatLive do
             />
             <span class="text-gray-700 dark:text-gray-300">Silent</span>
           </label>
-          <span class="ml-auto text-gray-400 dark:text-gray-500 font-mono text-xs">#<%= @channel.slug %></span>
+          <div class="ml-auto flex items-center gap-2">
+            <span class="text-gray-400 dark:text-gray-500 font-mono text-xs">#<%= @channel.slug %></span>
+            <%= if @other_user do %>
+              <button
+                phx-click="webrtc_start_call"
+                phx-value-to={@other_user.id}
+                class="p-1.5 text-gray-400 hover:text-green-500 dark:hover:text-green-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                title={"Call #{@other_user.username}"}
+              >
+                <.icon name="hero-phone" class="w-4 h-4" />
+              </button>
+            <% end %>
+          </div>
         </div>
 
         <%!-- Messages --%>
