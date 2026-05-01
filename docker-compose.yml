@@ -11,6 +11,7 @@ services:
       - PHX_HOST=${PHX_HOST:-antisocial.rprxy.mdma.sh}
       - PORT=4481
       - IDLE_LOCK_MINUTES=${IDLE_LOCK_MINUTES:-10}
+      - ALIAS_HOSTS=${ALIAS_HOSTS:-}
     depends_on:
       db:
         condition: service_healthy

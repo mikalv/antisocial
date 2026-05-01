@@ -5,6 +5,7 @@ defmodule AntisocialWeb.Router do
 
   pipeline :browser do
     plug :accepts, ["html"]
+    plug AntisocialWeb.AliasRedirectPlug
     plug :fetch_session
     plug :fetch_live_flash
     plug :put_root_layout, html: {AntisocialWeb.Layouts, :root}
