@@ -68,11 +68,12 @@ users
 channels
   id, slug (text unique),          -- "generelt", "kjemiprat", "minner", "hemmelig"
   name (text),                     -- display name, e.g. "#kjemiprat"
-  hidden (bool default false),     -- not linked in UI, URL-only
   pin_required (bool default false),
   inserted_at
-  -- /hemmelig is just a channel with hidden: true, pin_required: true
-  -- new channels are created by inserting a row here, no code changes needed
+  -- pin_required channels: require PIN on entry AND never persist in nav/session
+  -- navigate away → channel disappears from UI entirely, no trace
+  -- re-entry: user types channel name in "join by name" input
+  -- new channels = INSERT INTO channels, no code changes needed
 
 messages
   id, user_id (FK), channel_id (FK),
@@ -121,10 +122,20 @@ Archive view requires PIN, shows `WHERE archived_at IS NOT NULL`.
 /invite/:token        → InviteLive          (magic link, one-time)
 /chat/:channel        → ChatLive            (all channels, same LiveView)
 /bulletin             → BulletinLive        (shared pinboard)
-/hemmelig             → redirect → /chat/hemmelig  (PIN/hidden flag on channel row)
 ```
 
-`/hemmelig` is never linked from any UI element — it's a convenience redirect to `/chat/hemmelig`. Known only to users via onboarding modal. Hidden channels (where `channels.hidden = true`) are never shown in the channel list or navigation. Adding a new channel like `#kjemiprat` is just an `INSERT INTO channels` — no code changes needed.
+No special routes for secret channels — they're just slugs. `/hemmelig` convenience redirect removed; users navigate via "join by name" input.
+
+**Channel navigation model:**
+- Normal channels (`pin_required: false`): appear in sidebar nav, persist across sessions
+- Secret channels (`pin_required: true`): visible in sidebar **only while actively viewing**; navigate away → removed from nav immediately; no trace in session, localStorage, or history
+- Re-entry to secret channel: "join by name" input (small text field, always available)
+
+**Two-factor channel security for `pin_required` channels:**
+1. You must know the channel slug (obscurity)
+2. You must enter the correct PIN
+
+Both are required. Knowing the slug alone is not enough.
 
 ---
 
