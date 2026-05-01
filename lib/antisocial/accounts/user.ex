@@ -10,6 +10,9 @@ defmodule Antisocial.Accounts.User do
     field :pin, :string, virtual: true
     field :notification_mode, :string, default: "stealth"
     field :theme, :string, default: "system"
+    field :tab_title, :string, default: "Notes"
+    field :tab_icon, :string, default: "bubbles_chat"
+    field :idle_minutes, :integer, default: 10
     field :onboarded_at, :utc_datetime
 
     has_many :messages, Antisocial.Chat.Message
@@ -51,9 +54,10 @@ defmodule Antisocial.Accounts.User do
 
   def settings_changeset(user, attrs) do
     user
-    |> cast(attrs, [:notification_mode, :theme])
+    |> cast(attrs, [:notification_mode, :theme, :tab_title, :tab_icon, :idle_minutes])
     |> validate_inclusion(:notification_mode, ["active", "stealth"])
     |> validate_inclusion(:theme, ["light", "dark", "system"])
+    |> validate_number(:idle_minutes, greater_than: 0, less_than_or_equal_to: 120)
   end
 
   def onboarded_changeset(user) do

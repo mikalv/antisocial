@@ -1,36 +1,31 @@
 <div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-  <div class="w-full max-w-sm p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
-    <h1 class="text-2xl font-semibold text-gray-900 dark:text-white mb-6">Logg inn</h1>
-
-    <form method="post" action={~p"/login"} class="space-y-4">
+  <div class="w-full max-w-xs p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
+    <form method="post" action={~p"/login"} class="space-y-3">
       <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
 
-      <div>
-        <input
-          type="text"
-          name="username"
-          placeholder="Brukernavn"
-          autocomplete="username"
-          class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-      <div>
-        <input
-          type="password"
-          name="password"
-          placeholder="Passord"
-          autocomplete="current-password"
-          class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+      <input
+        type="text"
+        name="username"
+        placeholder="···"
+        autocomplete="username"
+        autofocus
+        class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-500"
+      />
+      <input
+        type="password"
+        name="password"
+        placeholder="···"
+        autocomplete="current-password"
+        class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-500"
+      />
       <%= if @error do %>
-        <p class="text-sm text-red-500"><%= @error %></p>
+        <p class="text-xs text-red-400 text-center"><%= @error %></p>
       <% end %>
       <button
         type="submit"
-        class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+        class="w-full py-2.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-700 dark:hover:bg-white text-white dark:text-gray-900 rounded-lg font-medium transition-colors text-sm"
       >
-        Logg inn
+        →
       </button>
     </form>
   </div>

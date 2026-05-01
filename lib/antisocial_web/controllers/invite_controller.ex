@@ -10,7 +10,7 @@ defmodule AntisocialWeb.InviteController do
         conn
         |> UserAuth.log_in_user(user)
         |> put_session(:must_change_password, true)
-        |> redirect(to: ~p"/chat/generelt")
+        |> redirect(to: ~p"/onboarding")
 
       {:error, _} ->
         conn

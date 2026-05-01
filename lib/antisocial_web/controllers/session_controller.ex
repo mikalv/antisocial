@@ -11,9 +11,10 @@ defmodule AntisocialWeb.SessionController do
   def create(conn, %{"username" => username, "password" => password}) do
     case Accounts.authenticate(username, password) do
       {:ok, user} ->
+        dest = if is_nil(user.onboarded_at), do: ~p"/onboarding", else: ~p"/chat/generelt"
         conn
         |> UserAuth.log_in_user(user)
-        |> redirect(to: ~p"/chat/generelt")
+        |> redirect(to: dest)
 
       {:error, _} ->
         render(conn, :new, error: "Feil brukernavn eller passord.", layout: false)
