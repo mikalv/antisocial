@@ -4,6 +4,7 @@ defmodule Antisocial.Accounts.User do
 
   schema "users" do
     field :username, :string
+    field :display_name, :string
     field :hashed_password, :string
     field :password, :string, virtual: true
     field :pin_hash, :string
@@ -13,6 +14,7 @@ defmodule Antisocial.Accounts.User do
     field :tab_title, :string, default: "Notes"
     field :tab_icon, :string, default: "bubbles_chat"
     field :idle_minutes, :integer, default: 10
+    field :contact_aliases, :map, default: %{}
     field :onboarded_at, :utc_datetime
 
     has_many :messages, Antisocial.Chat.Message
@@ -24,7 +26,7 @@ defmodule Antisocial.Accounts.User do
 
   def registration_changeset(user, attrs) do
     user
-    |> cast(attrs, [:username, :password])
+    |> cast(attrs, [:username, :password, :display_name])
     |> validate_required([:username, :password])
     |> validate_length(:username, min: 2, max: 30)
     |> validate_format(:username, ~r/^[a-zA-Z0-9_]+$/)
@@ -62,6 +64,14 @@ defmodule Antisocial.Accounts.User do
 
   def onboarded_changeset(user) do
     change(user, onboarded_at: DateTime.utc_now() |> DateTime.truncate(:second))
+  end
+
+  def contact_aliases_changeset(user, aliases) when is_map(aliases) do
+    change(user, contact_aliases: aliases)
+  end
+
+  def display_name_for(viewer, target) do
+    Map.get(viewer.contact_aliases || %{}, to_string(target.id), target.username)
   end
 
   def valid_password?(user, password) do

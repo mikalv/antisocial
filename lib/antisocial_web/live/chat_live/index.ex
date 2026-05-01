@@ -283,11 +283,16 @@ defmodule AntisocialWeb.ChatLive do
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
               <%= @current_user.username %>
             </span>
-            <%= if @unread > 0 do %>
-              <span class="ml-2 px-1.5 py-0.5 text-xs bg-blue-600 text-white rounded-full font-medium">
-                <%= @unread %>
-              </span>
-            <% end %>
+            <div class="flex items-center gap-1">
+              <%= if @unread > 0 do %>
+                <span class="px-1.5 py-0.5 text-xs bg-blue-600 text-white rounded-full font-medium">
+                  <%= @unread %>
+                </span>
+              <% end %>
+              <.link navigate={~p"/settings"} class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors" title="Innstillinger">
+                <.icon name="hero-cog-6-tooth" class="w-4 h-4" />
+              </.link>
+            </div>
           </div>
         </div>
       </aside>

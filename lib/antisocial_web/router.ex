@@ -41,6 +41,7 @@ defmodule AntisocialWeb.Router do
     live_session :authenticated,
       on_mount: [{AntisocialWeb.UserAuth, :require_authenticated}] do
       live "/onboarding", OnboardingLive, :index
+      live "/settings", SettingsLive, :index
       live "/chat/:channel", ChatLive, :show
       live "/bulletin", BulletinLive, :index
     end

@@ -25,6 +25,12 @@ defmodule AntisocialWeb.Endpoint do
     gzip: false,
     only: AntisocialWeb.static_paths()
 
+  # Serve icon files from /icons directory at root of project
+  plug Plug.Static,
+    at: "/icons",
+    from: Path.expand("../../../icons", __DIR__),
+    gzip: false
+
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do

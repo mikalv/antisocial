@@ -40,7 +40,7 @@ defmodule AntisocialWeb.OnboardingLive do
 
     {:ok,
      assign(socket,
-       step: 1,
+       step: 0,
        disguise: nil,
        selected_icon: "bubbles_chat",
        tab_title: "Meldinger",
@@ -59,6 +59,7 @@ defmodule AntisocialWeb.OnboardingLive do
     disguise = value == "yes"
     icon = if disguise, do: "calculator", else: "bubbles_chat"
     title = @disguise_titles[icon]
+    # yes → go to icon picker (step 2), no → skip to theme (step 3)
     {:noreply, assign(socket, disguise: disguise, selected_icon: icon, tab_title: title, step: if(disguise, do: 2, else: 3))}
   end
 
@@ -132,12 +133,35 @@ defmodule AntisocialWeb.OnboardingLive do
       class="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4"
     >
       <div class="w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8">
-        <%!-- Progress dots --%>
-        <div class="flex justify-center gap-2 mb-8">
-          <%= for i <- 1..4 do %>
-            <div class={"w-2 h-2 rounded-full transition-colors #{if i == @step, do: "bg-blue-600", else: if(i < @step, do: "bg-blue-200 dark:bg-blue-800", else: "bg-gray-200 dark:bg-gray-700")}"} />
-          <% end %>
-        </div>
+        <%!-- Progress dots (steps 1–4, hidden on step 0) --%>
+        <%= if @step > 0 do %>
+          <div class="flex justify-center gap-2 mb-8">
+            <%= for i <- 1..4 do %>
+              <div class={"w-2 h-2 rounded-full transition-colors #{if i == @step, do: "bg-blue-600", else: if(i < @step, do: "bg-blue-200 dark:bg-blue-800", else: "bg-gray-200 dark:bg-gray-700")}"} />
+            <% end %>
+          </div>
+        <% end %>
+
+        <%!-- Step 0: Personal welcome --%>
+        <%= if @step == 0 do %>
+          <div class="text-center space-y-8 py-4">
+            <div class="space-y-3">
+              <div class="text-4xl">👋</div>
+              <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">
+                Denne appen er laget for deg<%= if name = @current_user.display_name, do: ", #{name}", else: "" %>.
+              </h2>
+              <p class="text-sm text-gray-400 dark:text-gray-500 max-w-xs mx-auto">
+                Vi setter opp ting slik du vil ha det. Tar ett minutt.
+              </p>
+            </div>
+            <button
+              phx-click="next_step"
+              class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors"
+            >
+              Kom i gang →
+            </button>
+          </div>
+        <% end %>
 
         <%!-- Step 1: Disguise choice --%>
         <%= if @step == 1 do %>

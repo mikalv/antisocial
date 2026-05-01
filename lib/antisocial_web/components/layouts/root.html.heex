@@ -4,11 +4,26 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
-    <title><%= assigns[:page_title] || "Notes" %></title>
+    <title><%= assigns[:page_title] || (assigns[:current_user] && assigns[:current_user].tab_title) || "Notes" %></title>
     <meta name="description" content="" />
     <meta name="robots" content="noindex,nofollow" />
+    <%= if user = assigns[:current_user] do %>
+      <link rel="icon" href={"/icons/#{user.tab_icon || "bubbles_chat"}.ico"} />
+      <link rel="apple-touch-icon" href={"/icons/#{user.tab_icon || "bubbles_chat"}.png"} />
+    <% else %>
+      <link rel="icon" href="/favicon.ico" />
+    <% end %>
     <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}></script>
+    <%!-- Apply theme before paint to avoid flash --%>
+    <script>
+      (function() {
+        var t = localStorage.getItem("theme") || "system";
+        if (t === "dark" || (t === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
   </head>
   <body class="bg-white dark:bg-gray-900 antialiased">
     <%= @inner_content %>
