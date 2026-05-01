@@ -65,8 +65,18 @@ users
   onboarded_at (nullable),
   inserted_at
 
+channels
+  id, slug (text unique),          -- "generelt", "kjemiprat", "minner", "hemmelig"
+  name (text),                     -- display name, e.g. "#kjemiprat"
+  hidden (bool default false),     -- not linked in UI, URL-only
+  pin_required (bool default false),
+  inserted_at
+  -- /hemmelig is just a channel with hidden: true, pin_required: true
+  -- new channels are created by inserting a row here, no code changes needed
+
 messages
-  id, user_id (FK), body (text), rich_body (jsonb),
+  id, user_id (FK), channel_id (FK),
+  body (text), rich_body (jsonb),
   archived_at (nullable),         -- soft delete / hidden archive
   inserted_at
 
@@ -76,9 +86,10 @@ media_attachments
   inserted_at
 
 drafts
-  id, user_id (FK), body (text), rich_body (jsonb),
+  id, user_id (FK), channel_id (FK),
+  body (text), rich_body (jsonb),
   updated_at
-  -- one row per user, upsert on change
+  -- one row per user per channel, upsert on change
 
 bulletin_posts
   id, user_id (FK), body (text), pinned (bool default true),
@@ -105,15 +116,15 @@ Archive view requires PIN, shows `WHERE archived_at IS NOT NULL`.
 ## Routes
 
 ```
-/                     → redirect → /chat
+/                     → redirect → /chat/generelt
 /login                → SessionLive
-/invite/:token        → InviteLive     (magic link, one-time)
-/chat                 → ChatLive       (normal chat)
-/bulletin             → BulletinLive   (shared pinboard)
-/hemmelig             → HemmeligLive   (hidden chat, PIN required)
+/invite/:token        → InviteLive          (magic link, one-time)
+/chat/:channel        → ChatLive            (all channels, same LiveView)
+/bulletin             → BulletinLive        (shared pinboard)
+/hemmelig             → redirect → /chat/hemmelig  (PIN/hidden flag on channel row)
 ```
 
-`/hemmelig` is never linked from any UI element. Known only to users via onboarding modal.
+`/hemmelig` is never linked from any UI element — it's a convenience redirect to `/chat/hemmelig`. Known only to users via onboarding modal. Hidden channels (where `channels.hidden = true`) are never shown in the channel list or navigation. Adding a new channel like `#kjemiprat` is just an `INSERT INTO channels` — no code changes needed.
 
 ---
 
