@@ -29,6 +29,10 @@ defmodule Antisocial.Chat do
     Repo.all(from c in Channel, where: not c.pin_required, order_by: c.inserted_at)
   end
 
+  def list_all_channels do
+    Repo.all(from c in Channel, order_by: c.inserted_at)
+  end
+
   # ── Messages ──────────────────────────────────────────────────────────────
 
   def list_messages(channel_id, limit \\ 50) do

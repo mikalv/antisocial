@@ -51,7 +51,10 @@ defmodule AntisocialWeb.SettingsLive do
        user_sessions: sessions,
        current_session_token: current_token,
        passkeys: passkeys,
-       passkey_error: nil
+       passkey_error: nil,
+       tap_count: 0,
+       show_debug: false,
+       all_channels: []
      )
      |> allow_upload(:avatar, accept: ~w(image/*), max_entries: 1, max_file_size: 5_000_000)}
   end
@@ -90,6 +93,16 @@ defmodule AntisocialWeb.SettingsLive do
 
   def handle_event("update_pin_confirm", %{"pin_confirm" => pin}, socket) do
     {:noreply, assign(socket, pin_confirm: pin, saved: false)}
+  end
+
+  def handle_event("version_tap", _params, socket) do
+    count = socket.assigns.tap_count + 1
+    if count >= 5 do
+      all_channels = Antisocial.Chat.list_all_channels()
+      {:noreply, assign(socket, tap_count: 0, show_debug: true, all_channels: all_channels)}
+    else
+      {:noreply, assign(socket, tap_count: count)}
+    end
   end
 
   def handle_event("passkey_registered", _params, socket) do
@@ -603,7 +616,7 @@ defmodule AntisocialWeb.SettingsLive do
         <% end %>
 
         <%!-- Save --%>
-        <div class="flex items-center gap-4 pb-8">
+        <div class="flex items-center gap-4">
           <button
             phx-click="save"
             class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-sm transition-colors"
@@ -613,6 +626,55 @@ defmodule AntisocialWeb.SettingsLive do
           <%= if @saved do %>
             <span class="text-sm text-green-500">✓ Saved</span>
           <% end %>
+        </div>
+
+        <%!-- Debug panel (unlocked by tapping version 5 times) --%>
+        <%= if @show_debug do %>
+          <section class="space-y-4 pb-8">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-orange-400">Debug</h2>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-orange-200 dark:border-orange-800 overflow-hidden">
+              <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+                <p class="text-xs font-mono text-gray-500 dark:text-gray-400">
+                  antisocial v<%= Application.spec(:antisocial, :vsn) |> to_string() %>
+                  &nbsp;·&nbsp;
+                  elixir <%= System.version() %>
+                </p>
+              </div>
+              <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">All channels (<%= length(@all_channels) %>)</p>
+                <div class="space-y-1">
+                  <%= for ch <- @all_channels do %>
+                    <.link
+                      navigate={~p"/chat/#{ch.slug}"}
+                      class="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      <span class="font-mono">#<%= ch.slug %></span>
+                      <%= if ch.pin_required do %>
+                        <span class="text-xs px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400">secret</span>
+                      <% end %>
+                    </.link>
+                  <% end %>
+                </div>
+              </div>
+              <div class="px-5 py-3">
+                <p class="text-xs font-mono text-gray-400 dark:text-gray-500">node: <%= node() %></p>
+              </div>
+            </div>
+          </section>
+        <% end %>
+
+        <%!-- Version footer — tap 5 times to unlock debug panel --%>
+        <div class="pb-8 text-center">
+          <button
+            phx-click="version_tap"
+            class="text-xs text-gray-300 dark:text-gray-700 select-none"
+            tabindex="-1"
+          >
+            v<%= Application.spec(:antisocial, :vsn) |> to_string() %>
+            <%= if @tap_count > 0 and not @show_debug do %>
+              <span class="text-orange-400">(<%= 5 - @tap_count %> more)</span>
+            <% end %>
+          </button>
         </div>
       </div>
     </div>
