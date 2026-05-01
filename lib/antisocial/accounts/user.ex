@@ -1,0 +1,84 @@
+defmodule Antisocial.Accounts.User do
+  use Ecto.Schema
+  import Ecto.Changeset
+
+  schema "users" do
+    field :username, :string
+    field :hashed_password, :string
+    field :password, :string, virtual: true
+    field :pin_hash, :string
+    field :pin, :string, virtual: true
+    field :notification_mode, :string, default: "stealth"
+    field :theme, :string, default: "system"
+    field :onboarded_at, :utc_datetime
+
+    has_many :messages, Antisocial.Chat.Message
+    has_many :drafts, Antisocial.Chat.Draft
+    has_many :invite_tokens, Antisocial.Accounts.InviteToken
+
+    timestamps(type: :utc_datetime)
+  end
+
+  def registration_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:username, :password])
+    |> validate_required([:username, :password])
+    |> validate_length(:username, min: 2, max: 30)
+    |> validate_format(:username, ~r/^[a-zA-Z0-9_]+$/)
+    |> validate_length(:password, min: 8)
+    |> unique_constraint(:username)
+    |> hash_password()
+  end
+
+  def password_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:password])
+    |> validate_required([:password])
+    |> validate_length(:password, min: 8)
+    |> hash_password()
+  end
+
+  def pin_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:pin])
+    |> validate_length(:pin, min: 4, max: 12)
+    |> hash_pin()
+  end
+
+  def clear_pin_changeset(user) do
+    change(user, pin_hash: nil)
+  end
+
+  def settings_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:notification_mode, :theme])
+    |> validate_inclusion(:notification_mode, ["active", "stealth"])
+    |> validate_inclusion(:theme, ["light", "dark", "system"])
+  end
+
+  def onboarded_changeset(user) do
+    change(user, onboarded_at: DateTime.utc_now() |> DateTime.truncate(:second))
+  end
+
+  def valid_password?(user, password) do
+    Bcrypt.verify_pass(password, user.hashed_password)
+  end
+
+  def valid_pin?(user, pin) do
+    user.pin_hash != nil && Bcrypt.verify_pass(pin, user.pin_hash)
+  end
+
+  defp hash_password(changeset) do
+    case get_change(changeset, :password) do
+      nil -> changeset
+      password -> put_change(changeset, :hashed_password, Bcrypt.hash_pwd_salt(password))
+    end
+  end
+
+  defp hash_pin(changeset) do
+    case get_change(changeset, :pin) do
+      nil -> changeset
+      pin -> put_change(changeset, :pin_hash, Bcrypt.hash_pwd_salt(pin))
+    end
+  end
+end

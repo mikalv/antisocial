@@ -1,11 +1,6 @@
-# Script for populating the database. You can run it as:
-#
-#     mix run priv/repo/seeds.exs
-#
-# Inside the script, you can read and write to any of your
-# repositories directly:
-#
-#     Antisocial.Repo.insert!(%Antisocial.SomeSchema{})
-#
-# We recommend using the bang functions (`insert!`, `update!`
-# and so on) as they will fail if something goes wrong.
+alias Antisocial.{Repo, Chat.Channel}
+
+Repo.insert!(%Channel{slug: "generelt", name: "#generelt", pin_required: false},
+  on_conflict: :nothing,
+  conflict_target: :slug
+)
