@@ -24,6 +24,11 @@ function applyTheme(theme) {
   }
 }
 
+// Handle replace_url events from LiveView (used by panic button)
+window.addEventListener("phx:replace_url", (e) => {
+  history.replaceState(null, "", e.detail.url)
+})
+
 // Apply theme immediately on page load (before LiveView mounts) to avoid flash
 const storedTheme = localStorage.getItem("theme") || "system"
 applyTheme(storedTheme)
@@ -142,6 +147,37 @@ export const TabDisguise = {
       link.href = `/icons/${icon}`
       document.head.appendChild(link)
     }
+  }
+}
+
+// ─── Panic button ─────────────────────────────────────────────────────────────
+// Triggers: double-click on element OR Alt+Shift+X anywhere on page
+
+export const PanicButton = {
+  mounted() {
+    // Double-click trigger
+    let clicks = 0
+    this.el.addEventListener("click", () => {
+      clicks++
+      if (clicks === 2) {
+        clicks = 0
+        this.pushEvent("panic", {})
+      }
+      setTimeout(() => { clicks = 0 }, 400)
+    })
+
+    // Keyboard shortcut: Alt+Shift+X
+    this._keyHandler = (e) => {
+      if (e.altKey && e.shiftKey && e.key === "X") {
+        e.preventDefault()
+        this.pushEvent("panic", {})
+      }
+    }
+    document.addEventListener("keydown", this._keyHandler)
+  },
+
+  destroyed() {
+    document.removeEventListener("keydown", this._keyHandler)
   }
 }
 

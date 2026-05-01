@@ -165,31 +165,35 @@ defmodule AntisocialWeb.OnboardingLive do
 
         <%!-- Step 1: Disguise choice --%>
         <%= if @step == 1 do %>
-          <div class="text-center space-y-6">
+          <div class="space-y-6">
             <div>
-              <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Velkommen</h2>
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                Vil du at appen skal se ut som noe annet i nettleserfanen og på hjemskjermen?
+              <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Trenger du å skjule appen?</h2>
+              <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                Appen kan se ut som noe helt annet — kalkulator, Google, vitenskapelig verktøy — i nettleserfanen, ved lagring på hjemskjerm, og i app-bytter. Du kan endre dette når som helst i innstillinger.
               </p>
             </div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 gap-3">
               <button
                 phx-click="choose_disguise"
                 phx-value-value="yes"
-                class="p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-colors text-center"
+                class="p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-colors text-left flex items-start gap-4"
               >
-                <div class="text-2xl mb-1">🎭</div>
-                <div class="text-sm font-medium text-gray-700 dark:text-gray-300">Ja, skjul den</div>
-                <div class="text-xs text-gray-400 mt-0.5">Velg et annet ikon og navn</div>
+                <div class="text-3xl mt-0.5">🎭</div>
+                <div>
+                  <div class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Ja, skjul den</div>
+                  <div class="text-xs text-gray-400 leading-relaxed">Velg et forkledningsikon og navn. Fanen ser ut som noe uskyldig for andre som ser skjermen din.</div>
+                </div>
               </button>
               <button
                 phx-click="choose_disguise"
                 phx-value-value="no"
-                class="p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-colors text-center"
+                class="p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-colors text-left flex items-start gap-4"
               >
-                <div class="text-2xl mb-1">💬</div>
-                <div class="text-sm font-medium text-gray-700 dark:text-gray-300">Nei, vanlig</div>
-                <div class="text-xs text-gray-400 mt-0.5">Bruk standard ikon</div>
+                <div class="text-3xl mt-0.5">💬</div>
+                <div>
+                  <div class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Nei, det er greit</div>
+                  <div class="text-xs text-gray-400">Bruk standard chat-ikon. Du kan endre dette senere.</div>
+                </div>
               </button>
             </div>
           </div>

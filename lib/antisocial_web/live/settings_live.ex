@@ -163,7 +163,12 @@ defmodule AntisocialWeb.SettingsLive do
 
         <%!-- Tab disguise --%>
         <section class="space-y-4">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Fane-forkledning</h2>
+          <div>
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Fane-forkledning</h2>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              Styrer hva som vises i nettleserfanen, app-bytteren og ved lagring på hjemskjerm. Endre dette om situasjonen din endrer seg.
+            </p>
+          </div>
 
           <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 space-y-5 border border-gray-100 dark:border-gray-700">
             <div>

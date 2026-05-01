@@ -36,7 +36,8 @@ defmodule AntisocialWeb.ChatLive do
            unread: unread,
            show_create_channel: false,
            new_channel_slug: "",
-           idle_minutes: idle_minutes()
+           idle_minutes: idle_minutes(),
+           view_cleared: false
          )
          |> allow_upload(:media,
            accept: ~w(image/* video/* audio/*),
@@ -57,6 +58,16 @@ defmodule AntisocialWeb.ChatLive do
 
   def handle_event("lock", _params, socket) do
     {:noreply, assign(socket, locked: true)}
+  end
+
+  def handle_event("panic", _params, socket) do
+    # Clear messages from view (session only, no DB change)
+    # Lock with PIN if set, otherwise just clear and redirect to generelt
+    locked = socket.assigns.current_user.pin_hash != nil
+    {:noreply,
+     socket
+     |> assign(messages: [], view_cleared: true, locked: locked)
+     |> push_event("replace_url", %{url: "/chat/generelt"})}
   end
 
   # ── Messages ──────────────────────────────────────────────────────────────
@@ -233,7 +244,12 @@ defmodule AntisocialWeb.ChatLive do
       <%!-- Sidebar --%>
       <aside class="w-56 flex-shrink-0 bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
         <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-          <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Kanaler</p>
+          <%!-- Double-click or Alt+Shift+X triggers panic flush — no visible hint --%>
+          <p
+            id="channel-header"
+            phx-hook="PanicButton"
+            class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 select-none cursor-default"
+          >Kanaler</p>
         </div>
 
         <nav class="flex-1 overflow-y-auto p-2 space-y-0.5">
