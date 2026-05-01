@@ -130,13 +130,22 @@ No special routes for secret channels — they're just slugs. `/hemmelig` conven
 **Channel navigation model:**
 - Normal channels (`pin_required: false`): appear in sidebar nav, persist across sessions
 - Secret channels (`pin_required: true`): visible in sidebar **only while actively viewing**; navigate away → removed from nav immediately; no trace in session, localStorage, or history
-- Re-entry to secret channel: "join by name" input (small text field, always available)
+- Re-entry to secret channel: via **"Create channel"** input (same UI as creating a new channel)
+  - If slug exists → PIN prompt (no indication the channel already exists)
+  - If slug does not exist → actually creates the channel
+  - A curious onlooker sees an innocent "create channel" form, nothing more
 
 **Two-factor channel security for `pin_required` channels:**
 1. You must know the channel slug (obscurity)
 2. You must enter the correct PIN
 
 Both are required. Knowing the slug alone is not enough.
+
+**Sessions — Slack-style, long-lived:**
+- Cookie TTL: 30 days, rolling (resets on each visit)
+- No session expiry on inactivity — PIN lock handles local security
+- Password prompt only on fresh device / explicit logout
+- Security layers: long session → PIN lock → channel slug → channel PIN
 
 ---
 
