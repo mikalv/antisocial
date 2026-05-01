@@ -70,6 +70,7 @@ channels
   name (text),                     -- display name, e.g. "#kjemiprat"
   pin_required (bool default false),
   inserted_at
+  -- "generelt" channel is seeded automatically in priv/repo/seeds.exs (on_conflict: :nothing)
   -- pin_required channels: require PIN on entry AND never persist in nav/session
   -- navigate away → channel disappears from UI entirely, no trace
   -- re-entry: user types channel name in "join by name" input
