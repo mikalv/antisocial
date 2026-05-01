@@ -22,4 +22,5 @@ defmodule Antisocial.Chat.MediaAttachment do
 
   def image?(attachment), do: String.starts_with?(attachment.content_type, "image/")
   def video?(attachment), do: String.starts_with?(attachment.content_type, "video/")
+  def audio?(attachment), do: String.starts_with?(attachment.content_type, "audio/")
 end

@@ -100,9 +100,16 @@ defmodule AntisocialWeb.OnboardingLive do
     user = socket.assigns.current_user
     s = socket.assigns
 
-    # Validate PIN if provided
-    if s.pin != "" and s.pin != s.pin_confirm do
-      {:noreply, assign(socket, pin_error: "PIN-kodene stemmer ikke.")}
+    pin_error =
+      cond do
+        s.pin == "" -> nil
+        s.pin != s.pin_confirm -> "PIN-kodene stemmer ikke."
+        byte_size(s.pin) < 4 -> "PIN må være minst 4 tegn."
+        true -> nil
+      end
+
+    if pin_error do
+      {:noreply, assign(socket, pin_error: pin_error)}
     else
       # Save settings
       Accounts.update_settings(user, %{
@@ -133,10 +140,10 @@ defmodule AntisocialWeb.OnboardingLive do
       class="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4"
     >
       <div class="w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8">
-        <%!-- Progress dots (steps 1–4, hidden on step 0) --%>
+        <%!-- Progress dots (steps 1–5, hidden on step 0) --%>
         <%= if @step > 0 do %>
           <div class="flex justify-center gap-2 mb-8">
-            <%= for i <- 1..4 do %>
+            <%= for i <- 1..5 do %>
               <div class={"w-2 h-2 rounded-full transition-colors #{if i == @step, do: "bg-blue-600", else: if(i < @step, do: "bg-blue-200 dark:bg-blue-800", else: "bg-gray-200 dark:bg-gray-700")}"} />
             <% end %>
           </div>
@@ -325,6 +332,48 @@ defmodule AntisocialWeb.OnboardingLive do
               <%= if @pin_error do %>
                 <p class="text-xs text-red-500"><%= @pin_error %></p>
               <% end %>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+              <button phx-click="prev_step" class="flex-1 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors">
+                ← Tilbake
+              </button>
+              <button phx-click="next_step" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                Neste →
+              </button>
+            </div>
+          </div>
+        <% end %>
+
+        <%!-- Step 5: Hidden channels --%>
+        <%= if @step == 5 do %>
+          <div class="space-y-6">
+            <div>
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Skjulte kanaler</h2>
+              <p class="text-xs text-gray-400 dark:text-gray-500">Et tips du bør vite om.</p>
+            </div>
+
+            <div class="space-y-4 text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+              <div class="flex gap-3">
+                <div class="text-xl flex-shrink-0">🔒</div>
+                <p>
+                  I tillegg til vanlige kanaler kan du opprette <strong>skjulte kanaler</strong>.
+                  De vises <em>ikke</em> i sidemenyen — du må kjenne til kanalnavnet for å komme inn.
+                </p>
+              </div>
+              <div class="flex gap-3">
+                <div class="text-xl flex-shrink-0">🚪</div>
+                <p>
+                  Skriv kanalnavnet i "Gå til kanal"-feltet, eller del adressen direkte.
+                  En skjult kanal kan også kreve PIN for ekstra beskyttelse.
+                </p>
+              </div>
+              <div class="flex gap-3">
+                <div class="text-xl flex-shrink-0">📨</div>
+                <p>
+                  Du kan flytte en melding til en skjult kanal ved å holde inne meldingen (lang-trykk på mobil, høyreklikk på PC).
+                </p>
+              </div>
             </div>
 
             <div class="flex gap-3 pt-2">

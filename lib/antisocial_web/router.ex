@@ -24,7 +24,25 @@ defmodule AntisocialWeb.Router do
 
     get "/login", SessionController, :new
     post "/login", SessionController, :create
+    post "/login/device", SessionController, :device_login
     get "/invite/:token", InviteController, :show
+  end
+
+  # Passkey auth (unauthenticated)
+  scope "/passkeys", AntisocialWeb do
+    pipe_through :browser
+
+    get "/auth/challenge", PasskeyController, :auth_challenge
+    post "/auth", PasskeyController, :auth
+  end
+
+  # Passkey management (authenticated)
+  scope "/passkeys", AntisocialWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    get "/register/challenge", PasskeyController, :register_challenge
+    post "/register", PasskeyController, :register
+    delete "/:id", PasskeyController, :delete
   end
 
   # Redirect root + /hemmelig

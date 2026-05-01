@@ -14,8 +14,8 @@ defmodule Antisocial.Application do
       {Phoenix.PubSub, name: Antisocial.PubSub},
       # Start the Finch HTTP client for sending emails
       {Finch, name: Antisocial.Finch},
-      # Start a worker by calling: Antisocial.Worker.start_link(arg)
-      # {Antisocial.Worker, arg},
+      Antisocial.TTLWorker,
+      Antisocial.PasskeyChallenge,
       # Start to serve requests, typically the last entry
       AntisocialWeb.Endpoint
     ]

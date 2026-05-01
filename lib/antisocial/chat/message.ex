@@ -6,6 +6,11 @@ defmodule Antisocial.Chat.Message do
     field :body, :string, default: ""
     field :rich_body, :map
     field :archived_at, :utc_datetime
+    field :geo_lat, :float
+    field :geo_lng, :float
+    field :ttl_seconds, :integer
+    field :ttl_channel_slug, :string
+    field :first_read_at, :utc_datetime
 
     belongs_to :user, Antisocial.Accounts.User
     belongs_to :channel, Antisocial.Chat.Channel
@@ -16,7 +21,7 @@ defmodule Antisocial.Chat.Message do
 
   def changeset(message, attrs) do
     message
-    |> cast(attrs, [:user_id, :channel_id, :body, :rich_body])
+    |> cast(attrs, [:user_id, :channel_id, :body, :rich_body, :geo_lat, :geo_lng, :ttl_seconds, :ttl_channel_slug])
     |> validate_required([:user_id, :channel_id])
     |> validate_length(:body, max: 10_000)
   end

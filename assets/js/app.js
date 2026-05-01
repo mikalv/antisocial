@@ -2,7 +2,7 @@ import "phoenix_html"
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
-import {ThemeHook, PinLock, ScrollBottom, DraftAutosave, TypingIndicator, TabDisguise, UploadProgress, PanicButton} from "./hooks"
+import {ThemeHook, PinLock, ScrollBottom, ComposerHook, DraftAutosave, TypingIndicator, TabDisguise, UploadProgress, PanicButton, MessageContext, Notifications, CalculatorLock, VoiceRecorder, DeviceFingerprint, PasskeyRegister, KeystrokeCollector} from "./hooks"
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
@@ -17,7 +17,15 @@ let liveSocket = new LiveSocket("/live", Socket, {
     TypingIndicator,
     TabDisguise,
     UploadProgress,
+    ComposerHook,
     PanicButton,
+    MessageContext,
+    Notifications,
+    CalculatorLock,
+    VoiceRecorder,
+    DeviceFingerprint,
+    PasskeyRegister,
+    KeystrokeCollector,
   }
 })
 

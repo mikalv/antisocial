@@ -16,10 +16,14 @@ defmodule Antisocial.Accounts.User do
     field :idle_minutes, :integer, default: 10
     field :contact_aliases, :map, default: %{}
     field :onboarded_at, :utc_datetime
+    field :avatar_path, :string
+    field :keystroke_profile, :map
 
     has_many :messages, Antisocial.Chat.Message
+    has_many :passkeys, Antisocial.Accounts.Passkey
     has_many :drafts, Antisocial.Chat.Draft
     has_many :invite_tokens, Antisocial.Accounts.InviteToken
+    has_many :user_sessions, Antisocial.Accounts.UserSession
 
     timestamps(type: :utc_datetime)
   end

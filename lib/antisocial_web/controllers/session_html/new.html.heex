@@ -1,32 +1,83 @@
 <div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-  <div class="w-full max-w-xs p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
-    <form method="post" action={~p"/login"} class="space-y-3">
-      <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+  <div class="w-full max-w-xs space-y-4">
+    <%!-- Password login --%>
+    <div class="p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
+      <form method="post" action={~p"/login"} class="space-y-3">
+        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
 
+        <input
+          type="text"
+          name="username"
+          placeholder="···"
+          autocomplete="username"
+          autofocus
+          class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-500"
+        />
+        <input
+          type="password"
+          name="password"
+          placeholder="···"
+          autocomplete="current-password"
+          class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-500"
+        />
+        <%= if @error do %>
+          <p class="text-xs text-red-400 text-center"><%= @error %></p>
+        <% end %>
+        <button
+          type="submit"
+          class="w-full py-2.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-700 dark:hover:bg-white text-white dark:text-gray-900 rounded-lg font-medium transition-colors text-sm"
+        >
+          →
+        </button>
+      </form>
+    </div>
+
+    <%!-- Passkey login --%>
+    <div id="passkey-auth-section" class="p-5 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
+      <p class="text-xs text-gray-400 dark:text-gray-500 text-center mb-3">Passkey</p>
       <input
+        id="passkey-username-hint"
         type="text"
-        name="username"
-        placeholder="···"
-        autocomplete="username"
-        autofocus
-        class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-500"
+        placeholder="username (optional)"
+        class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 text-sm mb-2"
       />
-      <input
-        type="password"
-        name="password"
-        placeholder="···"
-        autocomplete="current-password"
-        class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-500"
-      />
-      <%= if @error do %>
-        <p class="text-xs text-red-400 text-center"><%= @error %></p>
-      <% end %>
       <button
-        type="submit"
-        class="w-full py-2.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-700 dark:hover:bg-white text-white dark:text-gray-900 rounded-lg font-medium transition-colors text-sm"
+        id="passkey-auth-btn"
+        class="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors text-sm"
       >
         →
       </button>
-    </form>
+      <p id="passkey-auth-error" class="text-xs text-red-400 text-center mt-2 hidden"></p>
+    </div>
+
+    <%!-- Device code login --%>
+    <div class="p-5 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
+      <form method="post" action={~p"/login/device"} class="space-y-3">
+        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+        <p class="text-xs text-gray-400 dark:text-gray-500 text-center">Device code</p>
+        <input
+          type="text"
+          name="username"
+          placeholder="username"
+          autocomplete="username"
+          class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+        />
+        <input
+          type="text"
+          name="code"
+          placeholder="000000"
+          inputmode="numeric"
+          maxlength="6"
+          autocomplete="one-time-code"
+          class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 text-center font-mono text-lg tracking-widest"
+        />
+        <button
+          type="submit"
+          class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-sm"
+        >
+          →
+        </button>
+      </form>
+    </div>
   </div>
 </div>

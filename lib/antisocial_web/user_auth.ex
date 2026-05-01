@@ -7,25 +7,34 @@ defmodule AntisocialWeb.UserAuth do
   alias Antisocial.Accounts
 
   @max_age 30 * 24 * 60 * 60
-  @remember_me_cookie "_antisocial_user"
-  @remember_me_options [sign: true, max_age: @max_age, same_site: "Lax"]
+  @session_cookie "_antisocial_session"
+  @cookie_options [sign: true, max_age: @max_age, same_site: "Lax", http_only: true]
 
   def log_in_user(conn, user) do
+    user_agent = get_req_header(conn, "user-agent") |> List.first()
+    ip_addr = conn.remote_ip |> :inet.ntoa() |> to_string()
+
+    {:ok, session} = Accounts.create_session(user, user_agent: user_agent, ip_addr: ip_addr)
+
     conn
     |> renew_session()
-    |> put_session(:user_id, user.id)
-    |> put_resp_cookie(@remember_me_cookie, user.id |> to_string(), @remember_me_options)
+    |> put_session(:session_token, session.token)
+    |> put_resp_cookie(@session_cookie, session.token, @cookie_options)
   end
 
   def log_out_user(conn) do
-    delete_resp_cookie(conn, @remember_me_cookie)
+    token = get_session(conn, :session_token) || conn.cookies[@session_cookie]
+    if token, do: Accounts.delete_session(token)
+
+    conn
     |> renew_session()
+    |> delete_resp_cookie(@session_cookie)
     |> redirect(to: ~p"/login")
   end
 
   def fetch_current_user(conn, _opts) do
-    {user_id, conn} = ensure_user_token(conn)
-    user = user_id && Accounts.get_user(user_id)
+    {token, conn} = ensure_session_token(conn)
+    user = token && Accounts.get_user_by_session_token(token)
     assign(conn, :current_user, user)
   end
 
@@ -34,7 +43,6 @@ defmodule AntisocialWeb.UserAuth do
       conn
     else
       conn
-      |> put_flash(:error, "Du må logge inn.")
       |> redirect(to: ~p"/login")
       |> halt()
     end
@@ -76,22 +84,20 @@ defmodule AntisocialWeb.UserAuth do
 
   defp mount_current_user(session, socket) do
     Phoenix.Component.assign_new(socket, :current_user, fn ->
-      if user_id = session["user_id"] do
-        Accounts.get_user(user_id)
-      end
+      token = session["session_token"]
+      token && Accounts.get_user_by_session_token(token)
     end)
   end
 
-  defp ensure_user_token(conn) do
-    if user_id = get_session(conn, :user_id) do
-      {user_id, conn}
+  defp ensure_session_token(conn) do
+    if token = get_session(conn, :session_token) do
+      {token, conn}
     else
-      conn = fetch_cookies(conn, signed: [@remember_me_cookie])
+      conn = fetch_cookies(conn, signed: [@session_cookie])
 
-      if user_id = conn.cookies[@remember_me_cookie] do
-        user_id_int = String.to_integer(user_id)
-        conn = put_session(conn, :user_id, user_id_int)
-        {user_id_int, conn}
+      if token = conn.cookies[@session_cookie] do
+        conn = put_session(conn, :session_token, token)
+        {token, conn}
       else
         {nil, conn}
       end

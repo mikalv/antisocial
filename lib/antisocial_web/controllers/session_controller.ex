@@ -17,13 +17,24 @@ defmodule AntisocialWeb.SessionController do
         |> redirect(to: dest)
 
       {:error, _} ->
-        render(conn, :new, error: "Feil brukernavn eller passord.", layout: false)
+        render(conn, :new, error: "Wrong username or password.", layout: false)
+    end
+  end
+
+  def device_login(conn, %{"username" => username, "code" => code}) do
+    case Accounts.consume_device_code(String.trim(username), String.trim(code)) do
+      {:ok, user} ->
+        conn
+        |> UserAuth.log_in_user(user)
+        |> redirect(to: ~p"/chat/generelt")
+
+      {:error, _} ->
+        render(conn, :new, error: "Invalid or expired device code.", layout: false)
     end
   end
 
   def delete(conn, _params) do
     conn
-    |> put_flash(:info, "Logget ut.")
     |> UserAuth.log_out_user()
   end
 end

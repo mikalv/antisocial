@@ -7,11 +7,17 @@ defmodule Antisocial.Chat do
 
   def get_channel_by_slug(slug), do: Repo.get_by(Channel, slug: slug)
 
-  def get_or_create_channel(slug) do
+  def get_or_create_channel(slug, opts \\ []) do
     case get_channel_by_slug(slug) do
       nil ->
+        attrs = %{
+          slug: slug,
+          name: "##{slug}",
+          pin_required: Keyword.get(opts, :pin_required, false)
+        }
+
         %Channel{}
-        |> Channel.changeset(%{slug: slug, name: "##{slug}"})
+        |> Channel.changeset(attrs)
         |> Repo.insert()
 
       channel ->
@@ -53,6 +59,26 @@ defmodule Antisocial.Chat do
         message = Repo.preload(message, [:user, :media_attachments])
         broadcast_message(message)
         {:ok, message}
+
+      err ->
+        err
+    end
+  end
+
+  def move_message(%Message{} = message, target_channel_id, _user_id) do
+    old_channel_id = message.channel_id
+
+    message
+    |> Ecto.Changeset.change(channel_id: target_channel_id)
+    |> Repo.update()
+    |> case do
+      {:ok, moved} ->
+        # Remove from source channel view
+        broadcast_archive(%{message | id: message.id, channel_id: old_channel_id})
+        # Notify target channel
+        moved = Repo.preload(moved, [:user, :media_attachments])
+        broadcast_message(moved)
+        {:ok, moved}
 
       err ->
         err
@@ -129,10 +155,47 @@ defmodule Antisocial.Chat do
     Application.get_env(:antisocial, :upload_dir, "uploads")
   end
 
-  def storage_path(filename) do
+  def storage_rel_path(filename) do
     date = Date.utc_today()
-    dir = Path.join([upload_dir(), to_string(date.year), String.pad_leading(to_string(date.month), 2, "0"), String.pad_leading(to_string(date.day), 2, "0")])
-    File.mkdir_p!(dir)
-    Path.join(dir, filename)
+    Path.join([
+      to_string(date.year),
+      String.pad_leading(to_string(date.month), 2, "0"),
+      String.pad_leading(to_string(date.day), 2, "0"),
+      filename
+    ])
+  end
+
+  def storage_path(filename) do
+    rel = storage_rel_path(filename)
+    abs = Path.join(upload_dir(), rel)
+    File.mkdir_p!(Path.dirname(abs))
+    abs
+  end
+
+  # ── TTL ───────────────────────────────────────────────────────────────────
+
+  def mark_first_read(%Message{ttl_seconds: nil}, _viewer_id), do: :ok
+  def mark_first_read(%Message{first_read_at: fa}, _viewer_id) when not is_nil(fa), do: :ok
+  def mark_first_read(%Message{user_id: uid}, viewer_id) when uid == viewer_id, do: :ok
+
+  def mark_first_read(%Message{} = message, _viewer_id) do
+    message
+    |> Ecto.Changeset.change(first_read_at: DateTime.utc_now() |> DateTime.truncate(:second))
+    |> Repo.update()
+    :ok
+  end
+
+  def list_expired_ttl_messages do
+    now = DateTime.utc_now()
+
+    Repo.all(
+      from m in Message,
+        where:
+          not is_nil(m.ttl_seconds) and not is_nil(m.first_read_at) and is_nil(m.archived_at),
+        preload: [:user, :media_attachments]
+    )
+    |> Enum.filter(fn m ->
+      DateTime.diff(now, m.first_read_at, :second) >= m.ttl_seconds
+    end)
   end
 end
